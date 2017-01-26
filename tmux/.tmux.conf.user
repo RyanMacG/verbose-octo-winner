@@ -1,0 +1,15 @@
+# List of plugins
+set -g @tpm_plugins '           \
+  tmux-plugins/tpm              \
+  tmux-plugins/tmux-sensible    \
+  tmux-plugins/tmux-resurrect   \
+  tmux-plugins/tmux-continuum   \
+  tmux-plugins/tmux-battery     \
+  tmux-plugins/tmux-sessionist  \
+'
+
+set -g @resurrect-strategy-nvim 'session'
+set -g @continuum-restore 'on'
+set -g status-right 'Batt: #{battery_icon} #{battery_percentage} #{battery_remain} | %a %h-%d %H:%M '
+
+run '~/.tmux/plugins/tpm/tpm'
