@@ -1,0 +1,104 @@
+#!/bin/sh
+
+OS=$(cat /etc/os-release)
+
+append_to_shell_rc() {
+  file=~/.zshrc
+  echo "$1" >> $file
+}
+
+update_packages() {
+  if $OS | grep 'Ubuntu'
+  then
+    sudo apt update -y; sudo apt upgrade -y
+  elif $OS | grep 'Fedora'
+  then
+    sudo dnf -y upgrade
+  else
+    echo unknown package manger
+  fi
+}
+
+install_package() {
+  if $OS | grep 'Ubuntu'
+  then
+    sudo apt install -y "$1"
+  elif $OS | grep 'Fedora'
+  then
+    sudo dnf install -y "$1"
+  fi
+}
+
+symlink_files() {
+  ln -s "$1" "$2"
+}
+
+update_packages
+
+install_package "git zsh tmux python2 python3"
+
+echo "Setting up zsh"
+
+mkdir -p "$HOME"/.zsh.before
+mkdir -p "$HOME"/.zsh.after
+mkdir -p "$HOME"/.zsh.prompts
+chsh -s /usr/local/bin/zsh
+
+echo "setting up vim"
+
+mkdir -p "$HOME"/.config/nvim
+cp "$HOME"/.dotfiles/vimrc "$HOME"/.config/nvim/init.vim
+symlink_files "$HOME"/.config/nvim/init.vim "$HOME"/.vimrc
+
+echo "Installing rbenv and some plugins"
+
+git clone https://github.com/rbenv/rbenv.git ~/.rbenv
+mkdir -p ~/.rbenv/plugins
+git clone https://github.com/rbenv/ruby-build.git ~/.rbenv/plugins/ruby-build
+git clone https://github.com/rkh/rbenv-update.git ~/.rbenv/plugins/rbenv-update
+git clone git://github.com/tpope/rbenv-ctags.git ~/.rbenv/plugins/rbenv-ctags
+
+# shellcheck disable=SC2016
+append_to_shell_rc 'export PATH="$HOME/.rbenv/bin:$PATH"'
+# shellcheck disable=SC2016
+append_to_shell_rc 'eval "$(rbenv init -)"'
+
+echo 'Setting up Ruby'
+find_latest_ruby() {
+  rbenv install -l | grep -v - | tail -1 | sed -e 's/^ *//'
+}
+
+ruby_version="$(find_latest_ruby)"
+rbenv install -s "$ruby_version"
+
+echo 'Finished rbenv and Ruby setup'
+
+if ! command -v brew >/dev/null; then
+    echo "Installing Linuxbrew ..."
+
+    curl -fsSL 'https://raw.githubusercontent.com/Linuxbrew/install/master/install' | ruby
+
+    # shellcheck disable=SC2016
+    append_to_shell_rc 'export PATH="$HOME/.linuxbrew/bin:$PATH"'
+    # shellcheck disable=SC2016
+    append_to_shell_rc 'export MANPATH="$HOME/.linuxbrew/share/man:$MANPATH"'
+    # shellcheck disable=SC2016
+    append_to_shell_rc 'export INFOPATH="$HOME/.linuxbrew/share/info:$INFOPATH"'
+fi
+
+echo "Lets install some utility packages"
+brew install hub ghi 
+
+brew install nvm npm
+
+echo "It's VIM time"
+brew install neovim/neovim/neovim
+
+# shellcheck disable=SC2016
+append_to_shell_rc 'export NVM_DIR="$HOME/.nvm"'
+# shellcheck disable=SC2016
+append_to_shell_rc '  . "$(brew --prefix nvm)/nvm.sh"'
+
+echo ''
+echo 'All done'
+
